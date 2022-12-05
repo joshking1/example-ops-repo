@@ -1,0 +1,9 @@
+- name: create a vpc
+  import_tasks: create.yml
+  when: vpc_state == 'present'
+
+- name: absent a vpc
+  import_tasks: absent.yml
+  when: vpc_state == 'absent'
+
+

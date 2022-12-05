@@ -1,0 +1,3 @@
+vpc_state: "{{ state | default('present') }}"
+vpc_cidr_block: 99.24.0.0/16
+vpc_name: "{{ aws_region | default('region') }}"

@@ -1,0 +1,25 @@
+# layer rules
+
+# [layername]-[public|private]
+
+# access_rules
+# [source_vendor_or_dc_or_who]-[ports]-[public|private]
+
+vpc_security_groups:
+  web-cloudflare-public:
+    name: web-cloudflare-public
+    description: allow access from from cloudflare proxies
+    rules:
+{% for item in cloudflare_ips %}
+      - proto: tcp
+        from_port: 80
+        to_port: 445
+        cidr_ip: {{ item }}
+{% endfor %}
+      - proto: icmp
+        from_port: 8 # icmp type, -1 = any type
+        to_port:  -1 # icmp subtype, -1 = any subtype
+        cidr_ip: 0.0.0.0/0
+
+
+

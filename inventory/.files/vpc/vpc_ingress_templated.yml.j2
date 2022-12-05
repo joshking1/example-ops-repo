@@ -1,0 +1,14 @@
+vpc_ingress:
+# rule no, protocol, allow/deny, cidr, icmp_type, icmp_code,
+#   optional                                          port from, port to
+
+  - [98, 'icmp', 'allow', '0.0.0.0/0', 0 , 0] # allow ping reply
+  - [99, 'icmp', 'allow', '0.0.0.0/0', 8 , 0] # allow ping request
+
+{% for key, value in mgmt_public_ips.items()|sort %}
+  - [{{ loop.index + 120 }}, 'tcp', 'allow', '{{ value.ip }}', null, null, 0, 65535 ] # {{ value.comment }}
+{% endfor %}
+
+  - [400, 'tcp', 'allow', '0.0.0.0/0', null, null, 32768, 65535 ]
+  - [401, 'udp', 'allow', '0.0.0.0/0', null, null, 32768, 65535 ]
+

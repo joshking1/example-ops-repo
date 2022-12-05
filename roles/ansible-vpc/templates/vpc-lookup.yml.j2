@@ -1,0 +1,22 @@
+vpc_id: {{ vpc_id }}
+{% for key, value in subnet_ids.items() %}
+vpc_subnet_{{ key | last }}: {{ value }}
+{% endfor %}
+
+vpc_subnets_2:
+{% for dict_item in subnet_ids | dictsort %}
+{% if loop.index != 3 %}
+  - {{ dict_item[1] }} # {{ loop.index }}
+{% endif %}
+{% endfor %}
+
+vpc_subnets:
+{% for dict_item in subnet_ids | dictsort %}
+  - {{ dict_item[1] }} # {{ loop.index }}
+{% endfor %}
+
+
+
+
+vpc_public_route_table_id: {{ public_route_table.route_table.id }}
+

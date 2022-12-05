@@ -1,0 +1,137 @@
+# NOTE: vpc info written to inventory
+
+
+- name: Clear all security group rules
+  ec2_group:
+    name: "{{ item.value.name }}"
+    description: "{{ item.value.description }}"
+    vpc_id: "{{ vpc_id }}"
+    rules: "{{ omit }}"
+    state: present
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  with_dict: "{{ vpcs_security_groups }}"
+  loop_control:
+    label: "{{ item.value.name }}"
+
+- name: absent security groups
+  ec2_group:
+    name: "{{ item.value.name }}"
+    description: "{{ item.value.description }}"
+    vpc_id: "{{ vpc_id }}"
+    rules: "{{ omit }}"
+    state: absent
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  with_dict: "{{ vpcs_security_groups }}"
+  loop_control:
+    label: "{{ item.value.name }}"
+
+
+- name: "Create NACL stateless firewall"
+  ec2_vpc_nacl:
+    vpc_id: "{{ vpc_id }}"
+    name: "{{ dc_name }}-nacl"
+    region: "{{ aws_region }}"
+    subnets: ['public_a', 'public_b', 'public_c']
+    tags:
+      dc: "{{ dc_name }}"
+    ingress: "{{ vpcs_vpc_ingress }}"
+    egress:
+        - [100, 'all', 'allow', '0.0.0.0/0', null, null, null, null]
+    state: absent
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+
+- name: absent key pair using provided key_material
+  ec2_key:
+    name: "{{ vpcs_ec2_key_name }}"
+    key_material: "{{ vpcs_ec2_key_material }}"
+    state: absent
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+
+# create a private hosted zone for the VPC with the Ansible module
+- name: absent Route 53 private hosted zone
+  route53_zone:
+    zone: "{{ vpcs_dns_zone }}"
+    state: absent
+    vpc_id: "{{ vpc_id }}"
+    vpc_region: "{{ aws_region }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+
+
+- name: absent VPC subnets
+  ec2_vpc_subnet:
+    vpc_id: "{{ vpc_id }}"
+    cidr: "{{ item.value.cidr }}"
+    az: "{{ item.value.az }}"
+    tags:
+      Name: "{{ item.key }}"
+    state: absent
+  with_dict: "{{ vpc_subnets }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  register: vpc_subnets
+
+- name: absent internet gateway for outbound traffic
+  ec2_vpc_igw:
+    vpc_id: "{{ vpc_id }}"
+    state: absent
+  register: igw
+  tags: [ igw ]
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+
+- name: Set up public subnet route table
+  ec2_vpc_route_table:
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    purge_subnets: false
+    lookup: tag
+    state: absent
+    tags:
+      Name: Public
+    subnets:
+      - public_a
+      - public_b
+      - public_c
+  register: public_route_table
+  tags: rtb
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+
+- name: absent a VPC
+  ec2_vpc_net:
+    name: "{{ vpc_vpc_name }}"
+    cidr_block: "{{ vpc_vpc_cidr_block }}"
+    region: "{{ aws_region }}"
+    state: absent
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  register: vpc
+
+#######################
+
+
+
+

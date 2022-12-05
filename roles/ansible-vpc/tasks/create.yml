@@ -1,0 +1,280 @@
+- name: "create a VPC for {{ vpc_cidr_block }}"
+  ec2_vpc_net:
+    name: "{{ vpc_name }}"
+    cidr_block: "{{ vpc_cidr_block }}"
+    region: "{{ aws_region }}"
+    state: "{{ vpc_state }}"
+    tags:
+      module: ec2_vpc_net
+      environment: "{{ label }}"
+      dc: "{{ dc_name }}"
+      Name: "{{ dc_name }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+#  register: vpc
+  tags: [ vpc_route53, vpc_igw, vpc_subnet, vpc_nacl, vpc_security_group ]
+
+- name: lookup vpc facts
+  ec2_vpc_net_facts:
+    filters:
+      "tag:Name": "{{ dc_name }}"
+  register: vpc
+  check_mode: yes
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  tags: [ vpc_route53, vpc_igw, vpc_subnet, vpc_nacl, vpc_security_group ]
+
+# - debug: msg="{{ vpc }}"
+- name: "set fact: vpc_id"
+  set_fact:
+    vpc_id: "{{ vpc.vpcs[0].id }}"
+  tags: [ vpc_route53, vpc_igw, vpc_subnet, vpc_nacl, vpc_security_group ]
+
+#- debug: msg="{{ vpc }}"
+
+- name: create igw
+  ec2_vpc_igw:
+    vpc_id: "{{ vpc_id }}"
+    state: present
+  register: igw
+  tags: [ vpc_route53, vpc_subnet, vpc_igw, vpc_rtb ]
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+
+#- debug: msg="{{ igw }}"
+
+- name: create VPC subnets
+  ec2_vpc_subnet:
+    vpc_id: "{{ vpc_id }}"
+    cidr: "{{ item.value.cidr }}"
+    az: "{{ item.value.az }}"
+    map_public: "{{ item.value.map_public | default('yes') }}"
+    tags:
+      Name: "{{ item.key }}"
+  with_dict: "{{ vpc_subnets }}"
+  loop_control:
+    label: "{{ item.key }} {{ item.value.az }} {{ item.value.cidr }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  register: vpc_subnets
+  tags: [ vpc_route53, vpc_subnet ]
+
+- ec2_vpc_subnet_facts:
+    filters:
+      vpc-id: "{{ vpc_id }}"
+  register: all_subnets
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  tags: [ vpc_route53, vpc_subnet ]
+
+- name: "set fact: subnet_ids"
+  set_fact:
+    subnet_ids: "{{ all_subnets.subnets | items2dict(key_name='availability_zone', value_name='subnet_id') }}"
+  tags: [ vpc_route53, vpc_subnet ]
+
+#- debug: msg="{{ all_subnets.subnets | items2dict(key_name='availability_zone', value_name='subnet_id') }}"
+
+#- debug: msg="route_table {{ vpc_route_tables.route_tables[0].id }}"
+
+# - debug:
+#     msg: "{{ subnet_ids }}"
+#   tags: vpc_subnet
+# 
+
+- name: "Set up public subnet route table"
+  ec2_vpc_route_table:
+    vpc_id: "{{ vpc_id }}"
+    region: "{{ aws_region }}"
+    purge_subnets: false
+    purge_routes: false # allow us to add routes
+    tags:
+      Name: Public
+    lookup: tag
+    subnets:
+      - public_a
+      - public_b
+      - public_c
+    routes:
+      - dest: 0.0.0.0/0
+        gateway_id: "{{ igw.gateway_id }}"
+      - dest: "{{ vpc_mongodb_atlas_cidr }}"
+        gateway_id: "{{ vpc_mongodb_atlas_peer }}"
+  register: public_route_table
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  tags: [ vpc_route53, vpc_subnet, vpc_rtb ]
+  # https://github.com/ansible/ansible/issues/59863 urgh
+  ignore_errors: true
+
+
+# - debug:
+#     msg: "{{ public_route_table }}"
+#   tags: [ vpc_rtb ]
+# 
+# - debug:
+#     msg: "{{ public_route_table.route_table.id }}"
+#   tags: [ vpc_rtb ]
+
+- name: "set dhcp option"
+  ec2_vpc_dhcp_option:
+    domain_name: "{{ vpc_private_dns_zone }}"
+    dns_servers:
+      - AmazonProvidedDNS
+    region: "{{ aws_region }}"
+    vpc_id: "{{ vpc_id }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  tags: [ vpc_dhcp ]
+
+- name: "set ec2_key"
+  ec2_key:
+    name: "{{ vpc_ec2_key_name }}"
+    key_material: "{{ vpc_ec2_key_material }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+
+- name: "create Route 53 zone"
+  route53_zone:
+    zone: "{{ vpc_private_dns_zone }}"
+    state: present
+    vpc_id: "{{ vpc_id }}"
+    vpc_region: "{{ aws_region }}"
+  register: route53
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  tags: [ vpc_route53 ]
+
+- name: "create SOA record"
+  route53:
+    state: present
+    zone: "{{ vpc_private_dns_zone }}"
+    record: "{{ vpc_private_dns_zone }}."
+    type: SOA
+    ttl: 900
+    private_zone: yes
+    overwrite: yes
+    value: "{{ vpc_route53_soa_record | default('ns-1536.awsdns-00.co.uk. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 60') }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  tags: [ vpc_route53 ]
+
+- name: "template custom ips in vpc nacl format"
+  template:
+    src: "{{ inventory_dir }}/.files/vpc/vpc_ingress_templated.yml.j2"
+    dest: "{{ inventory_dir }}/.files/vpc/vpc_ingress_templated.yml"
+    mode: '0644'
+  become: no
+  tags: [ vpc_nacl  ]
+
+- include_vars:
+    file: "{{ inventory_dir }}/.files/vpc/vpc_ingress_templated.yml"
+  tags: [ vpc_nacl  ]
+
+- name: "Create NACL"
+  ec2_vpc_nacl:
+    vpc_id: "{{ vpc_id }}"
+    name: "{{ dc_name }}-nacl"
+    region: "{{ aws_region }}"
+    subnets: ['public_a', 'public_b', 'public_c']
+    tags:
+      dc: "{{ dc_name }}"
+    ingress: "{{ vpc_ingress }}"
+    egress: "{{ vpc_egress
+    state: 'present'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  tags: [ vpc_nacl ]
+
+# - block:
+#   - include_tasks: vpc_security_groups_loop.yml
+#     with_dict: "{{ vpc_security_groups }}"
+#     loop_control:
+#       loop_var: vpc_security_groups_loop
+#   tags: [ vpc_security_group ]
+#
+
+- name: "template custom ips in vpc sg format"
+  template:
+    src: "{{ inventory_dir }}/.files/vpc/vpc_sg_templated.yml.j2"
+    dest: "{{ inventory_dir }}/.files/vpc/vpc_sg_templated.yml"
+    mode: '0644'
+  become: no
+  tags: [ vpc_security_group  ]
+
+- include_vars:
+    file: "{{ inventory_dir }}/.files/vpc/vpc_sg_templated.yml"
+  tags: [ vpc_security_group  ]
+
+- name: initialize security groups
+  ec2_group:
+    name: "{{ item.value.name }}"
+    description: "{{ item.value.description }}"
+    vpc_id: "{{ vpc_id }}"
+    purge_rules: no
+    state: "{{ item.value.state | default('present') }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  with_dict: "{{ vpc_security_groups }}"
+  register: security_groups
+  loop_control:
+    label: "{{ item.value.name }}"
+  tags: [ vpc_security_group ]
+
+# - debug:
+#     msg: "{{ security_groups }}"
+#   tags: [ vpc_security_group ]
+#
+
+- name: create actual security groups rules
+  ec2_group:
+    name: "{{ item.value.name }}"
+    description: "{{ item.value.description }}"
+    vpc_id: "{{ vpc_id }}"
+    rules: "{{ item.value.rules | default ([]) }}"
+    state: "{{ item.value.state | default('present') }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_region }}"
+  with_dict: "{{ vpc_security_groups }}"
+  tags: [ vpc_security_group ]
+  loop_control:
+    label: "{{ item.value.name }} - {{ item.value.rules }}"
+
+
+##############
+
+
+- name: "template vpc_id and subnet_{{ aws_region }}a subnet_{{ aws_region }}b subnet_{{ aws_region }}c into {{ inventory_dir }}/group_vars/dc_name/{{ dc_name }}/vpc-lookup.yml"
+  template:
+    src: vpc-lookup.yml.j2
+    dest: "{{ inventory_dir }}/group_vars/{{ dc_name }}/vpc-lookup.yml"
+    mode: '0644'
+  become: no
+  tags: [ vpc, vpc_subnet , vpc_route53  ]
+
+
