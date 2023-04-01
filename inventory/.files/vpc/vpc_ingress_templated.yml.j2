@@ -1,9 +1,17 @@
+# Read about vpc Ingress 
+
 vpc_ingress:
 # rule no, protocol, allow/deny, cidr, icmp_type, icmp_code,
 #   optional                                          port from, port to
 
   - [98, 'icmp', 'allow', '0.0.0.0/0', 0 , 0] # allow ping reply
   - [99, 'icmp', 'allow', '0.0.0.0/0', 8 , 0] # allow ping request
+  
+  # Notes 
+ # This is a Jinja2 loop that iterates over the items of a dictionary named "mgmt_public_ips". The "items()" method is used to get a list of (key, value) pairs from the dictionary, and the "|sort" filter is applied to sort the items by their key.
+# For each item in the dictionary, the loop generates a rule in the form of a list that allows TCP traffic from the IP address specified in the "ip" field of the dictionary entry, on any port. The loop also includes a comment based on the "comment" field of the dictionary entry.
+# The "loop.index" variable is used to generate a unique rule number for each generated rule, starting at 121. Since "loop.index" starts at 1, the expression "loop.index + 120" generates the required rule number.
+# In summary, this Jinja2 loop generates a list of ingress rules for a VPC in AWS that allows TCP traffic from the IP addresses specified in the "mgmt_public_ips" dictionary on any port, along with a unique rule number and a comment.
 
 {% for key, value in mgmt_public_ips.items()|sort %}
   - [{{ loop.index + 120 }}, 'tcp', 'allow', '{{ value.ip }}', null, null, 0, 65535 ] # {{ value.comment }}
@@ -12,3 +20,29 @@ vpc_ingress:
   - [400, 'tcp', 'allow', '0.0.0.0/0', null, null, 32768, 65535 ]
   - [401, 'udp', 'allow', '0.0.0.0/0', null, null, 32768, 65535 ]
 
+
+# Notes 
+# The extension ".yml.j2" typically indicates a YAML file that uses Jinja2 templating language. YAML (YAML Ain't Markup Language) is a human-readable data serialization format that is often used for configuration files, while Jinja2 is a popular templating engine for Python.
+# Jinja2 allows you to insert dynamic content into YAML files by using placeholders, which are then filled in at runtime based on the data provided. This can be useful for generating configuration files for different environments or instances of an application.
+# So, in summary, a file with the ".yml.j2" extension is likely a YAML file that uses Jinja2 templating language to generate dynamic content.
+
+# Notes on the code 
+
+# YAML file that includes some Jinja2 templating code. Specifically, the section between the "{% for key, value in mgmt_public_ips.items()|sort %}" and "{% endfor %}" tags is Jinja2 code.
+
+# The YAML part of the file defines a list of ingress rules for a VPC (Virtual Private Cloud) in AWS (Amazon Web Services). 
+# Each rule is represented as a list of elements, where each element specifies a particular aspect of the rule, such as the protocol, whether to allow or deny traffic, the IP range, and port range.
+
+# For example, the first two rules allow ICMP traffic (ping requests and replies) from any IP address. 
+# The third rule allows TCP traffic from any IP address on ports 32768-65535. The fourth rule allows UDP traffic from any IP address on the same port range.
+
+# The Jinja2 part of the file uses a loop to generate additional ingress rules based on the values in the "mgmt_public_ips" dictionary. 
+# Specifically, it generates a rule for each item in the dictionary that allows TCP traffic from the IP address specified in the "ip" field of the dictionary entry, on any port. The loop also includes a comment based on the "comment" field of the dictionary entry. 
+# The "loop.index + 120" expression generates a unique rule number for each generated rule, starting at 121.
+
+# Mores Notes on Iteration and for looping 
+# loop.index 
+# "loop.index" is a variable in Jinja2 templating language that represents the current iteration index of a loop. 
+# It starts at 1 for the first iteration and increments by 1 for each subsequent iteration.
+# This variable is useful when you need to generate unique values for each iteration of a loop, such as assigning unique IDs or numbering items in a list.
+# For example, in a Jinja2 template, you might use the "loop.index" variable to generate a numbered list of items like this:
