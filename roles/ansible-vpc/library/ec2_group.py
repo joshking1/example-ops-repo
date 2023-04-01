@@ -115,6 +115,20 @@ notes:
   - Preview diff mode support is added in version 2.7.
 '''
 
+
+# MY NOTES to hep you underatdn the code 
+
+# This is the source code for an Ansible module called "ec2_group". This module is used to create and manage security groups for Amazon EC2 instances. It is written in Python and requires the "boto3" library to be installed.
+
+# The module has several options including "name" and "group_id" which are used to identify the security group to manage. "description" is used to provide a description for the security group. "vpc_id" is used to specify the VPC in which the security group should be created.
+
+# The "rules" and "rules_egress" options are used to define the firewall rules for inbound and outbound traffic, respectively. These rules can include the name of a group which allows idempotent loopback additions. The "purge_rules" and "purge_rules_egress" options are used to delete existing rules that are not found in the rules list.
+
+# The "tags" and "purge_tags" options are used to manage tags for the security group. The "state" option is used to create or delete the security group.
+
+# Overall, this module provides a comprehensive way to manage security groups for EC2 instances through Ansible.
+
+
 EXAMPLES = '''
 - name: example using security group rule descriptions
   ec2_group:
@@ -188,6 +202,14 @@ EXAMPLES = '''
         group_name: example-other
         # description to use if example-other needs to be created
         group_desc: other example EC2 group
+
+ # MY NOTES 
+
+# The first example creates an EC2 security group with a name, description, VPC ID, and a single ingress rule that allows TCP traffic on port 80 from any IP address. The rule_desc parameter is used to provide a description for the rule.
+
+# The second example creates an EC2 security group with a name, description, VPC ID, region, AWS access key, AWS secret key, and multiple ingress and egress rules. The ingress rules allow traffic on TCP ports 80, 22, 443, and 3306, as well as UDP ports 10050 and 10051, and ICMP traffic. The egress rule allows traffic on TCP port 80 and IPv6 traffic on the 64:ff9b::/96 CIDR block, and specifies a group name and description to use if the specified group does not already exist. The last ingress rule allows all traffic on all ports and protocols within the specified CIDR block.
+
+# Both examples demonstrate how to use the ec2_group module to manage security group rules in AWS using Ansible.
 
 - name: example2 ec2 group
   ec2_group:
@@ -292,6 +314,7 @@ owner_id:
   type: int
   returned: on create/update
 '''
+# The above gives string Output formatted as multi-line strings 
 
 import json
 import re
@@ -309,8 +332,42 @@ from ansible.module_utils.compat.ipaddress import ip_network, IPv6Network
 from ansible.module_utils._text import to_text
 from ansible.module_utils.six import string_types
 
+# Notes to help you understand the above python code 
+'''
+This is a Python code snippet that imports various modules and functions.
+
+The json module provides functionality to encode and decode JSON data.
+
+The re module provides support for regular expressions in Python.
+
+The itertools module provides functions for creating iterators for efficient looping.
+
+The copy module provides functions for copying objects.
+
+The time module provides various time-related functions.
+
+The collections module provides alternatives to built-in types with more features, such as the namedtuple function used in this code.
+
+The ansible.module_utils.aws.core module provides the AnsibleAWSModule class for creating Ansible modules that interact with AWS services using the Boto3 library. The is_boto3_error_code function checks if an exception raised by Boto3 matches a specific error code.
+
+The ansible.module_utils.aws.iam module provides functions for working with AWS Identity and Access Management (IAM).
+
+The ansible.module_utils.aws.waiters module provides functions for waiting on AWS resources to reach a certain state.
+
+The ansible.module_utils.ec2 module provides functions for working with Amazon EC2 instances.
+
+The ansible.module_utils.common.network module provides functions for working with IP addresses and subnets.
+
+The ansible.module_utils.compat.ipaddress module provides compatibility functions for working with IP addresses and subnets in Python 2 and 3.
+
+The ansible.module_utils._text module provides compatibility functions for working with strings in Python 2 and 3.
+
+The ansible.module_utils.six module provides compatibility functions for writing code that works in both Python 2 and 3.
+
+'''
+
 try:
-    from botocore.exceptions import BotoCoreError, ClientError
+    from botocore.exceptions import BotoCoreError, ClientErro
 except ImportError:
     pass  # caught by AnsibleAWSModule
 
@@ -319,6 +376,16 @@ Rule = namedtuple('Rule', ['port_range', 'protocol', 'target', 'target_type', 'd
 valid_targets = set(['ipv4', 'ipv6', 'group', 'ip_prefix'])
 current_account_id = None
 
+'''
+This code is importing two exceptions, BotoCoreError and ClientError, from the botocore.exceptions module. 
+If there is an ImportError when trying to import these exceptions, the code will catch the error and do nothing with the pass statement.
+The code also defines a named tuple called Rule, which has five fields: port_range, protocol, target, target_type, and description. 
+This tuple will be used to represent security group rules.
+The code creates a set called valid_targets that contains four strings: 'ipv4', 'ipv6', 'group', and 'ip_prefix'. 
+These are the valid target types for a security group rule.
+Finally, the code sets the current_account_id variable to None. This variable will be used later to store the AWS account ID of the current user.
+
+'''
 
 def rule_cmp(a, b):
     """Compare rules without descriptions"""
@@ -332,11 +399,28 @@ def rule_cmp(a, b):
         elif getattr(a, prop) != getattr(b, prop):
             return False
     return True
+'''
+This is a function called rule_cmp that compares two rules for a security group without considering their descriptions. 
+The function takes in two parameters, a and b, which are both objects of a named tuple called Rule.
+The function then iterates over a list of properties that the two rules have, which are port_range, protocol, target, and target_type. 
+It checks each property between the two rules to see if they are equal.
+There is a special case for port_range, where if the two rules have the same protocol and the port range is (-1, -1) or (None, None), they are considered equal. 
+Otherwise, the port range needs to match between the two rules.
+If any of the properties are not equal between the two rules, the function returns False. 
+If all the properties are equal, the function returns True.
 
+'''
 
 def rules_to_permissions(rules):
     return [to_permission(rule) for rule in rules]
 
+'''
+This is a Python function called rules_to_permissions. It takes in a list of rules and returns a list of permissions.
+Each rule is transformed into a permission by calling the to_permission function on it. 
+The resulting permission is then added to the list of permissions.
+So this function is essentially transforming one list of objects into another list of objects, where each object in the new list is created by applying a function to each object in the original list.
+
+'''
 
 def to_permission(rule):
     # take a Rule, output the serialized grant
@@ -382,6 +466,17 @@ def to_permission(rule):
     elif rule.target_type not in valid_targets:
         raise ValueError('Invalid target type for rule {0}'.format(rule))
     return fix_port_and_protocol(perm)
+  
+  '''
+This is a function called "to_permission" that takes in a "rule" object and returns a serialized "grant" object.
+The "rule" object has several properties like "protocol", "port_range", "target", "target_type", and "description".
+The "to_permission" function uses these properties to create a "perm" object with properties like "IpProtocol", "FromPort", "ToPort", "IpRanges", "Ipv6Ranges", "UserIdGroupPairs", or "PrefixListIds".
+Depending on the value of the "target_type" property, the "to_permission" function sets different properties of the "perm" object. 
+For example, if the "target_type" is "ipv4", then it sets the "IpRanges" property of "perm". If the "target_type" is "group", then it sets the "UserIdGroupPairs" property of "perm".
+Finally, the "fix_port_and_protocol" function is called to make sure that the values of "FromPort", "ToPort", and "IpProtocol" are set correctly.
+Overall, this function takes in a "rule" object and creates a "grant" object that can be used to set permissions for a system or service.
+
+'''
 
 
 def rule_from_group_permission(perm):
@@ -433,7 +528,18 @@ def rule_from_group_permission(perm):
                 'group',
                 pair.get('Description')
             )
+'''
+This is a function called "rule_from_group_permission" that takes in a "perm" object and returns a set of "Rule" objects.
+The "perm" object has several properties like "IpProtocol", "FromPort", "ToPort", "IpRanges", "Ipv6Ranges", "UserIdGroupPairs", or "PrefixListIds".
+The "rule_from_group_permission" function uses these properties to create a set of "Rule" objects. It does this by iterating over the different target types, such as "ipv4", "ipv6", "ip_prefix", and "group".
+For each target type, the function checks if the "perm" object has a property that corresponds to that target type. If it does, the function iterates over the list of targets for that property and creates a "Rule" object for each target.
+The "Rule" object has properties like "port_range", "protocol", "target", "target_type", and "description". The "port_range" property is obtained by calling the "ports_from_permission" function, which extracts the "FromPort" and "ToPort" values from the "perm" object.
+The "protocol" property is set to the value of "IpProtocol" from the "perm" object.
+The "target" property is set to the appropriate value depending on the target type. For example, if the target type is "ipv4", then the "target" property is set to the value of "CidrIp" from the "perm" object. If the target type is "group", then the "target" property is set to the value of "GroupId" from the "perm" object.
+Finally, the "description" property is set to the value of "Description" from the "perm" object, if it exists.
+Overall, this function takes in a "perm" object and creates a set of "Rule" objects that can be used to set permissions for a system or service.
 
+'''
 
 @AWSRetry.backoff(tries=5, delay=5, backoff=2.0)
 def get_security_groups_with_backoff(connection, **kwargs):
@@ -446,7 +552,15 @@ def sg_exists_with_backoff(connection, **kwargs):
         return connection.describe_security_groups(**kwargs)
     except is_boto3_error_code('InvalidGroup.NotFound'):
         return {'SecurityGroups': []}
+'''
+This code is for interacting with AWS (Amazon Web Services) to get information about security groups.
+The code defines two functions that use a Python library called "AWSRetry" to retry failed API calls to AWS with a backoff strategy.
+The first function is called get_security_groups_with_backoff(), and it takes a connection object as its first argument and additional keyword arguments (**kwargs) that can be passed to the describe_security_groups() method of the connection object. This function simply calls the describe_security_groups() method with the provided arguments, but if the call fails, it will retry up to 5 times with a 5-second delay between each retry, using an exponential backoff strategy (doubling the delay time with each retry).
+The second function is called sg_exists_with_backoff(), and it takes the same arguments as the first function. 
+This function also calls describe_security_groups(), but it handles the case where the security group specified in the arguments does not exist. If the call to describe_security_groups() raises an error with the error code "InvalidGroup.NotFound", the function will return an empty dictionary ({'SecurityGroups': []}) instead of raising an exception. 
+This is useful for checking if a security group exists without having to handle the exception explicitly. Like the first function, this function retries failed API calls up to 5 times with a 5-second delay and exponential backoff strategy.
 
+''' 
 
 def deduplicate_rules_args(rules):
     """Returns unique rules"""
