@@ -15,6 +15,21 @@
   with_dict: "{{ vpcs_security_groups }}"
   loop_control:
     label: "{{ item.value.name }}"
+    
+# This code is a part of an Ansible playbook that clears all security group rules for a given set of EC2 instances within a VPC. Here's how it works:
+# with_dict is a loop that iterates over the dictionary vpcs_security_groups. 
+# Each iteration assigns the dictionary value to the item.value variable, and the dictionary key to the item.key variable.
+# For each iteration, the ec2_group module is called to modify the security group rules for the security group associated with the name specified in item.value.name.
+# The description field in item.value specifies the description of the security group.
+# The vpc_id field in item.value specifies the ID of the VPC in which the security group resides.
+# The rules field is set to omit which means the module won't change the existing security group rules.
+# The state field is set to present which means that the security group should exist.
+# The environment section specifies the AWS access key ID, secret access key, and region to use for this playbook.
+# In summary, this code clears all security group rules for a specified set of EC2 instances within a VPC, using the ec2_group module provided by Ansible.
+# This section of the code sets up environment variables used for authentication to access the Amazon Web Services (AWS) resources. 
+# Specifically, it sets the AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION variables to the values specified in the variables aws_access_key_id, aws_secret_access_key, and aws_region, respectively.
+# These variables are required to authenticate the connection to the AWS resources, and the AWS SDKs (in this case, the Boto3 library for Python) automatically retrieve the values set in these environment variables to establish the connection. 
+# The AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY values are used for authentication, while the AWS_REGION value specifies which AWS region to use.
 
 - name: absent security groups
   ec2_group:
