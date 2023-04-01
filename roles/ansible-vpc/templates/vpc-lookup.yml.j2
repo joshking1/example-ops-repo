@@ -3,6 +3,11 @@ vpc_id: {{ vpc_id }}
 vpc_subnet_{{ key | last }}: {{ value }}
 {% endfor %}
 
+# vpc_id: {{ vpc_id }} - This line is telling the template language to insert the value of the vpc_id variable into the text. vpc_id seems to represent the ID of a Virtual Private Cloud (VPC), which is a virtual network in the cloud.
+# {% for key, value in subnet_ids.items() %} - This line is the beginning of a loop that iterates over the subnet_ids dictionary. The key variable will represent the keys (subnet IDs) in the dictionary, while value will represent the corresponding values (details about the subnet).
+# vpc_subnet_{{ key | last }}: {{ value }} - This line is generating some text for each subnet in the subnet_ids dictionary. It creates a new variable called vpc_subnet_{last_key_of_subnet_ids} for each subnet and assigns the value of the subnet to the variable. The key | last filter is used to extract the last item in the key list, which seems to be a numerical ID for the subnet.
+# {% endfor %} This line marks the end of the for loop.
+
 vpc_subnets_2:
 {% for dict_item in subnet_ids | dictsort %}
 {% if loop.index != 3 %}
@@ -10,13 +15,30 @@ vpc_subnets_2:
 {% endif %}
 {% endfor %}
 
+# This code is also using a template language to generate some text based on variables. Here's what each line means:
+# vpc_subnets_2: - This line is simply creating a header for the generated text. - {% for dict_item in subnet_ids | dictsort %} - This line is starting a loop that iterates over the subnet_ids dictionary, which contains details about the subnets in the VPC. The dictsort filter is used to sort the dictionary by key (subnet ID) before iterating over it.
+# {% if loop.index != 3 %} - This line is an if statement that checks whether the current iteration index is not equal to 3. The loop.index variable represents the current iteration index.
+# - {{ dict_item[1] }} # {{ loop.index }} - This line generates a list item for each subnet in the dictionary, but only for subnets that are not the third one. It starts with a hyphen (-) followed by the value of the second item in the dict_item tuple (which is the subnet ID). Finally, it adds a comment with the current iteration index.
+# {% endif %} - This line marks the end of the if statement.
+# {% endfor %} - This line marks the end of the for loop.
+
+
+
 vpc_subnets:
 {% for dict_item in subnet_ids | dictsort %}
   - {{ dict_item[1] }} # {{ loop.index }}
 {% endfor %}
 
 
-
+# This code is also using a template language to generate some text based on variables. Here's what each line means:
+# vpc_subnets: - This line is simply creating a header for the generated text.
+# {% for dict_item in subnet_ids | dictsort %} - This line is starting a loop that iterates over the subnet_ids dictionary, which contains details about the subnets in the VPC. The dictsort filter is used to sort the dictionary by key (subnet ID) before iterating over it.
+# - {{ dict_item[1] }} # {{ loop.index }} - This line generates a list item for each subnet in the dictionary. It starts with a hyphen (-) followed by the value of the second item in the dict_item tuple (which is the subnet ID). Finally, it adds a comment with the current iteration index.
+# {% endfor %} - This line marks the end of the for loop.
 
 vpc_public_route_table_id: {{ public_route_table.route_table.id }}
+
+# vpc_public_route_table_id: - This line is creating a header for the generated text.
+# {{ public_route_table.route_table.id }} - This is the variable that is being used to generate the ID of the public route table in the VPC. It looks like public_route_table is a dictionary that contains information about the route table, and route_table is a key in that dictionary that returns a sub-dictionary with additional details about the route table. Finally, id is a key in that sub-dictionary that returns the actual ID of the route table.
+# Overall, this code will generate a string that includes the header vpc_public_route_table_id: followed by the ID of the public route table in the VPC.
 
