@@ -1,3 +1,15 @@
 vpc_state: "{{ state | default('present') }}"
 vpc_cidr_block: 99.24.0.0/16
 vpc_name: "{{ aws_region | default('region') }}"
+
+
+# Notes for dummies  
+
+# This is a configuration file for creating a Virtual Private Cloud (VPC) in an AWS environment using  Ansible.
+
+# vpc_state: "{{ state | default('present') }}": This line is defining the state of the VPC. The default('present') part means that if no state is specified, the VPC will be created if it doesn't already exist.
+
+# vpc_cidr_block: 99.24.0.0/16: This line is setting the CIDR block for the VPC. The CIDR block defines the range of IP addresses that will be used for the VPC.
+
+# vpc_name: "{{ aws_region | default('region') }}": This line is defining the name of the VPC. The aws_region variable is being used to dynamically set the name based on the region where the VPC is being created. If the aws_region variable is not set, the default value of 'region' will be used.
+
