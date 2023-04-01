@@ -21,5 +21,31 @@ vpc_security_groups:
         to_port:  -1 # icmp subtype, -1 = any subtype
         cidr_ip: 0.0.0.0/0
 
+# This code is using something called a "for loop" to create a set of rules for a VPC security group. The loop is going through a list of IP addresses called "cloudflare_ips". For each IP address in the list, it creates a new rule that allows TCP traffic on ports 80 and 445 from that IP address.
 
+# To break it down further:
+
+# for item in cloudflare_ips: This is the start of the loop. It's saying "for each item in the list of cloudflare_ips, do the following steps."
+
+# - proto: tcp: This is the first line of the rule. It's specifying that this rule applies to TCP traffic.
+
+# from_port: 80: This line is setting the starting port number for the allowed traffic. In this case, it's port 80, which is commonly used for HTTP traffic.
+
+# to_port: 445: This line is setting the ending port number for the allowed traffic. In this case, it's port 445, which is commonly used for SMB traffic.
+
+# cidr_ip: {{ item }}: This line is specifying the IP address that's allowed to send traffic on these ports. The {{ item }} part is a placeholder that's filled in with the actual IP address from the cloudflare_ips list for each iteration of the loop.
+
+# So essentially, this code is creating a set of rules that allow incoming TCP traffic on ports 80 and 445 from a list of Cloudflare IP addresses.
+
+# {% endfor %}: This marks the end of the for loop that was started earlier.
+
+# - proto: icmp: This is the start of a new rule that allows incoming ICMP traffic (such as ping requests).
+
+# from_port: 8: This line is setting the ICMP type that's allowed. In this case, type 8 is for echo requests, which are used in ping tests.
+
+# to_port: -1: This line is setting the ICMP subtype that's allowed. The value of -1 means "any subtype", so all ICMP subtypes will be allowed.
+
+# cidr_ip: 0.0.0.0/0: This line is specifying the IP address range that's allowed to send ICMP traffic. The value of 0.0.0.0/0 means "any IP address", so any IP address will be allowed to send ICMP traffic.
+
+# So this rule is allowing any IP address to send ICMP traffic, which includes ping requests, to instances within the VPC security group.
 
