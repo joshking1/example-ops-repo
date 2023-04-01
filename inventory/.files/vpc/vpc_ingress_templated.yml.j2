@@ -7,11 +7,17 @@ vpc_ingress:
   - [98, 'icmp', 'allow', '0.0.0.0/0', 0 , 0] # allow ping reply
   - [99, 'icmp', 'allow', '0.0.0.0/0', 8 , 0] # allow ping request
   
-  # Notes 
- # This is a Jinja2 loop that iterates over the items of a dictionary named "mgmt_public_ips". The "items()" method is used to get a list of (key, value) pairs from the dictionary, and the "|sort" filter is applied to sort the items by their key.
+# Notes 
+# This is a Jinja2 loop that iterates over the items of a dictionary named "mgmt_public_ips". The "items()" method is used to get a list of (key, value) pairs from the dictionary, and the "|sort" filter is applied to sort the items by their key.
 # For each item in the dictionary, the loop generates a rule in the form of a list that allows TCP traffic from the IP address specified in the "ip" field of the dictionary entry, on any port. The loop also includes a comment based on the "comment" field of the dictionary entry.
 # The "loop.index" variable is used to generate a unique rule number for each generated rule, starting at 121. Since "loop.index" starts at 1, the expression "loop.index + 120" generates the required rule number.
 # In summary, this Jinja2 loop generates a list of ingress rules for a VPC in AWS that allows TCP traffic from the IP addresses specified in the "mgmt_public_ips" dictionary on any port, along with a unique rule number and a comment.
+
+# Mores notes on placeholder
+# In Python, double curly braces "{{ }}" are used in templating engines like Jinja2 to denote a placeholder for a variable that will be rendered at runtime.
+# In the context of the code you provided, the double curly braces "{{ }}" are used to render the value of the "value.ip" variable as a string. 
+# The value of this variable will be substituted into the rendered output at runtime.
+# For example, if the value of "value.ip" is "192.168.1.1", the rendered output would be:
 
 {% for key, value in mgmt_public_ips.items()|sort %}
   - [{{ loop.index + 120 }}, 'tcp', 'allow', '{{ value.ip }}', null, null, 0, 65535 ] # {{ value.comment }}
